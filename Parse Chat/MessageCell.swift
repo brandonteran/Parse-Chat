@@ -7,9 +7,26 @@
 //
 
 import UIKit
+import Parse
+
 
 class MessageCell: UITableViewCell {
     @IBOutlet weak var messageLabel: UILabel!
+    @IBOutlet weak var usernameLabel: UILabel!
+    
+    
+    var messages: PFObject! {
+        didSet {
+            messageLabel.text = messages.object(forKey: "text") as? String
+            let user = messages.object(forKey: "user") as? PFUser
+            if (user != nil) {
+                usernameLabel.text = user?.username
+            }
+            else {
+                usernameLabel.text = "🤖"
+            }
+        }
+    }
     
     
     override func awakeFromNib() {

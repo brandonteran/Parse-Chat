@@ -15,28 +15,54 @@ class ChatViewController: UIViewController, UITableViewDataSource, UITableViewDe
     @IBOutlet weak var tableView: UITableView!
     
     
+    var messages: [PFObject] = []
+    
+    
     @IBAction func sendMessage(_ sender: UIButton) {
-        let chatMessage = PFObject(className: "Message")
-        
-        chatMessage["text"] = messageTextField.text ?? ""
-        
-        chatMessage.saveInBackground { (success, error) in
-            if success {
-                print("The message was saved!")
-            } else if let error = error {
-                print("Problem saving message: \(error.localizedDescription)")
+        if messageTextField.text != "" {
+            let message = PFObject(className: "Message")
+            message["text"] = messageTextField.text
+            message["user"] = PFUser.current()
+            message.saveInBackground(block: {(success: Bool?, error: Error?) in
+                if success == true {
+                    print ("message sent")
+                }
+                else {
+                    print ("message not sent")
+                }
+            })
+        }
+    }
+    
+    
+    @objc func onTimer() {
+        let query = PFQuery(className: "Message")
+        query.whereKeyExists("text").includeKey("user")
+        query.order(byDescending: "createdAt")
+        query.findObjectsInBackground { (objects: [PFObject]?, error: Error?) -> Void in
+            if error == nil {
+                // The find succeeded.
+                self.messages = objects!
+                self.tableView.reloadData()
+                
+            } else {
+                // Log details of the failure
+                print(error!.localizedDescription)
             }
         }
     }
     
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return 1
+        return messages.count
     }
     
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = 
+        let cell = tableView.dequeueReusableCell(withIdentifier: "MessageCell", for: indexPath) as! MessageCell
+        cell.messages = (self.messages[indexPath.row])
+        
+        return cell
     }
     
     
@@ -46,6 +72,8 @@ class ChatViewController: UIViewController, UITableViewDataSource, UITableViewDe
         tableView.dataSource = self
         tableView.rowHeight = UITableViewAutomaticDimension
         tableView.estimatedRowHeight = 50
+        
+        Timer.scheduledTimer(timeInterval: 1, target: self, selector: #selector(ChatViewController.onTimer), userInfo: nil, repeats: true)
     }
 
     override func didReceiveMemoryWarning() {
